@@ -116,6 +116,35 @@ Author a new stateflow graph in a BP scene (`Assets/Scenes/BloodPressureTraining
 
 ---
 
+## Authoring patient cases
+
+Patient cases are authored as `PatientProfile` ScriptableObject assets
+(`Assets/Scripts/BloodPressure/PatientProfile.cs`):
+
+1. In the Project window, right-click →
+   **Create → TrainAR → BloodPressure → Patient Profile**.
+2. Save the new asset under `Assets/ScriptableObjects/PatientProfiles/`
+   (e.g. `Normotensive_Adult.asset`, `StageII_Hypertension.asset`,
+   `AuscultatoryGap_Case.asset`).
+3. Set `systolicMmHg`, `diastolicMmHg`, `heartRateBpm`,
+   `armCircumferenceCm`, `toleranceMmHg`, and the optional
+   `auscultatoryGap*` fields. `OnValidate` enforces
+   `diastolic < systolic` and a sane gap window.
+4. Reference the active profile from the scene's BP controller (added in
+   step 4 of this plan) so every simulation script reads ground truth
+   from the same asset.
+
+Two helper methods are exposed for the simulation layer:
+
+- `PatientProfile.IsKorotkoffAudibleAt(pressureMmHg)` — used by
+  `KorotkoffAudioEngine` to decide whether the cuff pressure currently
+  sits inside the audible window (accounting for auscultatory gaps).
+- `PatientProfile.IsReadingCorrect(learnerSystolic, learnerDiastolic)` —
+  used by `BPMeasurementAssessment` to score the learner's final entry
+  within `±toleranceMmHg`.
+
+---
+
 ## Verification
 
 - **Editor smoke test:** Open `Assets/Scenes/BloodPressureTraining.unity`, press Play with the XR Device Simulator, walk the full stateflow end-to-end. No console errors, every state transition fires.
