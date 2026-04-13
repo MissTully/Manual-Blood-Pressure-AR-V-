@@ -68,6 +68,58 @@ Packages/packages-lock.json              (updated by the package resolver)
 - `adb install` of the resulting APK on a Galaxy XR (or Meta Quest as a stand-in
   during development) boots into a stereo view with tracked head + controllers.
 
+## Authoring `BP_XRRig.prefab` (step 2, Editor-side)
+
+`XRInteractionAdapter.cs` is committed and ready to drive the existing
+`InteractionController` from XR controllers, but the rig prefab itself must
+be authored in the Unity Editor because `.prefab` files reference the GUIDs
+of components that only exist after the OpenXR + XRI packages have been
+resolved.
+
+Once the packages are installed (see step 3 above), do the following in the
+Editor and commit the result:
+
+1. **GameObject → XR → XR Origin (Action-based)**. This creates the XR
+   Origin with a Camera Offset, Main Camera, and two `ActionBasedController`
+   children (LeftHand, RightHand).
+2. Add an `XRRayInteractor` to each controller (if not already present) and
+   an `XRInteractorLineVisual` for a pointer line. Set **Raycast Mask** to
+   exclude the `TrainARObject` tag so the XRI visual ray does not fight the
+   TrainAR raycast — the TrainAR selection ray is what actually drives
+   object selection via the adapter.
+3. On the root of the XR Origin, add the `XRInteractionAdapter` component
+   and wire:
+   - `interactionController` → the `InteractionController` in the scene
+     (from `Assets/Scene.unity` or the new BP scene).
+   - `controllerAim` → the right-hand controller's aim pose transform
+     (e.g. the `RightHand Controller` GameObject itself — its forward is
+     the aim direction).
+   - `selectAction` → `XRI RightHand Interaction/Select` from the default
+     `XRI Default Input Actions` asset.
+   - `activateAction` → `XRI RightHand Interaction/Activate`.
+4. Add a second `XRInteractionAdapter` for the left hand if you want both
+   hands to drive selection, or leave it right-hand-only to start.
+5. Enable **Hand Tracking Subsystem** on both controllers via the XRI
+   Hands Interaction Setup (GameObject → XR → Hand-Tracking).
+6. **Drag the configured XR Origin into `Assets/Prefabs/BP_XRRig.prefab`.**
+7. Commit `Assets/Prefabs/BP_XRRig.prefab` and its `.meta` file.
+
+The adapter script is guarded by the `TRAINAR_XR_HMD` define set in step 2
+of the *in-Editor* instructions above, so the input-action wiring only
+compiles into the XR build and the handheld ARCore build is unaffected.
+
+### Verification of the rig
+
+- Press Play in the Editor with the **XR Device Simulator** enabled
+  (Package Manager → XR Interaction Toolkit → Samples → XR Device
+  Simulator). The simulated right controller's ray should highlight
+  TrainAR objects in the coffee-machine example scene, pressing the
+  simulated grip should grab them, and pressing the activate button
+  should fire their `Interact` / `Combine` action.
+- If nothing selects: confirm `interactionController.interactionRaySource`
+  is being set (add a `Debug.Log` in `XRInteractionAdapter.Start`) and that
+  the controller ray's forward actually hits the TrainAR object's collider.
+
 ## Why the XR settings asset was not created from the CLI
 
 Unity's XR Plug-in Management stores its settings in
