@@ -33,6 +33,15 @@ namespace Interaction
         [Tooltip("Reference to the camera associated with the AR Device.")]
         private Camera arCamera;
         /// <summary>
+        /// Optional override for the origin of the selection raycast.
+        /// When assigned (e.g. by <see cref="XRInteractionAdapter"/> to a
+        /// controller's aim pose) selection is driven from this transform's
+        /// position + forward vector instead of the center of
+        /// <see cref="arCamera"/>. Leave unset for the handheld AR path.
+        /// </summary>
+        [Tooltip("Optional override for the selection raycast origin (used by the XR adapter).")]
+        public Transform interactionRaySource;
+        /// <summary>
         /// Reference to the grabber object, which becomes the parent of a picked up (grabbed) TrainAR-object.
         /// </summary>
         /// <value>One grabber per scene.</value>
@@ -157,8 +166,12 @@ namespace Interaction
 
             if (!objectPlacementController.objectWasSpawned) return;
 
-            //Check if the ray hits anything at all, return when no hit
-            Ray ray = arCamera.ViewportPointToRay(new Vector3(0.5f,0.5f,0f));
+            //Check if the ray hits anything at all, return when no hit.
+            //XR builds assign interactionRaySource (e.g. a controller aim pose);
+            //handheld AR falls back to the center of the AR camera's viewport.
+            Ray ray = interactionRaySource != null
+                ? new Ray(interactionRaySource.position, interactionRaySource.forward)
+                : arCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             if (!Physics.Raycast(ray, out hit))
             {
                 //Reset the Selection state
