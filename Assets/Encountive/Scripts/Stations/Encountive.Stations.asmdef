@@ -1,0 +1,19 @@
+{
+    "name": "Encountive.Stations",
+    "rootNamespace": "Encountive.Stations",
+    "references": [
+        "Encountive.Domain",
+        "Encountive.SafetyGates",
+        "Encountive.Triggers",
+        "Encountive.Telemetry"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

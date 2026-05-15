@@ -6,7 +6,8 @@
         "Encountive.SafetyGates",
         "Encountive.Hal",
         "Encountive.Triggers",
-        "Encountive.Telemetry"
+        "Encountive.Telemetry",
+        "Encountive.Stations"
     ],
     "includePlatforms": [
         "Editor"
