@@ -1,0 +1,16 @@
+{
+    "name": "Encountive.Telemetry",
+    "rootNamespace": "Encountive.Telemetry",
+    "references": [
+        "Encountive.Domain"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

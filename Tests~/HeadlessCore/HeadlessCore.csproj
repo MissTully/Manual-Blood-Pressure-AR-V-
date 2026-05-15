@@ -26,6 +26,7 @@
     <Compile Include="$(AssetsRoot)/SafetyGates/**/*.cs" />
     <Compile Include="$(AssetsRoot)/Hal/**/*.cs" />
     <Compile Include="$(AssetsRoot)/Triggers/**/*.cs" />
+    <Compile Include="$(AssetsRoot)/Telemetry/**/*.cs" />
     <Compile Include="$(AssetsRoot)/Tests/EditMode/**/*.cs" />
   </ItemGroup>
 
