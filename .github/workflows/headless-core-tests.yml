@@ -1,0 +1,33 @@
+name: Headless Core Tests
+
+# Runs the pure-C# Encountive safety core (Domain, SafetyGates, Hal,
+# Triggers) under plain .NET — no Unity license required. Per SDD §16.1
+# the deterministic safety-gate engine must stay green on every change;
+# per §17.2 tests run on every push / PR.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "Assets/Encountive/Scripts/**"
+      - "Tests~/HeadlessCore/**"
+      - ".github/workflows/headless-core-tests.yml"
+  pull_request:
+    paths:
+      - "Assets/Encountive/Scripts/**"
+      - "Tests~/HeadlessCore/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Run headless safety-core tests
+        working-directory: Tests~/HeadlessCore
+        run: dotnet test --nologo --logger "console;verbosity=normal"

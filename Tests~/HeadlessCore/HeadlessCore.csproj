@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Headless test harness for the pure-C# Encountive layers
+    (Domain, SafetyGates, Hal, Triggers). These assemblies are authored
+    with `noEngineReferences` so they compile and run under plain .NET
+    with zero Unity dependency (SDD §16.1 testability requirement).
+
+    This folder ends with `~` so the Unity Editor ignores it entirely;
+    the same source files are still consumed by Unity's EditMode Test
+    Runner via Encountive.SafetyGates.Tests.asmdef. CI runs `dotnet test`
+    here so the deterministic safety core stays green on every push
+    (SDD §17.2) without needing a Unity license in CI.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <AssetsRoot>$(MSBuildThisFileDirectory)../../Assets/Encountive/Scripts</AssetsRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(AssetsRoot)/Domain/**/*.cs" />
+    <Compile Include="$(AssetsRoot)/SafetyGates/**/*.cs" />
+    <Compile Include="$(AssetsRoot)/Hal/**/*.cs" />
+    <Compile Include="$(AssetsRoot)/Triggers/**/*.cs" />
+    <Compile Include="$(AssetsRoot)/Tests/EditMode/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+</Project>

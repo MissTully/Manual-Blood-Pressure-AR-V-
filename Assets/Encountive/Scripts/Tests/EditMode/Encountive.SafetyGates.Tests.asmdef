@@ -3,7 +3,9 @@
     "rootNamespace": "Encountive.SafetyGates.Tests",
     "references": [
         "Encountive.Domain",
-        "Encountive.SafetyGates"
+        "Encountive.SafetyGates",
+        "Encountive.Hal",
+        "Encountive.Triggers"
     ],
     "includePlatforms": [
         "Editor"
