@@ -1,0 +1,17 @@
+{
+    "name": "Encountive.Content",
+    "rootNamespace": "Encountive.Content",
+    "references": [
+        "Encountive.Domain",
+        "Encountive.SafetyGates"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
