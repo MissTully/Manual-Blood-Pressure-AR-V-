@@ -1,53 +1,96 @@
 namespace Encountive.Telemetry
 {
     /// <summary>
-    /// Encountive xAPI verb and extension IRIs (SDD §5.2). New event
-    /// classes live under the Encountive extension namespace; existing
-    /// vocabulary is reused where it covers the event.
+    /// Controlled vocabulary for the AR BP Cuff Trainer xAPI profile v1
+    /// (companion spec §4, §5, §8). Implementations MUST NOT emit verbs
+    /// outside this list under this profile.
     /// </summary>
     public static class XApiVocabulary
     {
-        public const string VerbBase = "https://xapi.encountive.com/verbs/";
-        public const string ExtBase = "https://xapi.encountive.com/extensions/";
-        public const string ActivityBase = "https://xapi.encountive.com/activities/mbpxr/";
+        public const string ProfileIri =
+            "https://encountive.com/xapi/profiles/ar-bp-cuff/v1";
 
-        // Session lifecycle
-        public const string SessionStarted = VerbBase + "session-started";
-        public const string SessionEnded = VerbBase + "session-ended";
-        public const string StationEntered = VerbBase + "station-entered";
-        public const string StationExited = VerbBase + "station-exited";
+        public const string VerbBase = "https://encountive.com/xapi/verbs/";
+        public const string ExtBase = "https://encountive.com/xapi/extensions/";
+        public const string ActivityBase = "https://encountive.com/xapi/activities/";
+        public const string ActivityTypeBase = "https://encountive.com/xapi/activity-types/";
+        public const string LearnersHomePage = "https://encountive.com/learners";
+        public const string Platform = "AR-BP-Cuff-Trainer";
 
-        // Stage progression
-        public const string StageEntered = VerbBase + "stage-entered";
-        public const string StageCompleted = VerbBase + "stage-completed";
+        // --- Standard ADL verbs (spec §4.1) ---
+        public const string Initialized = "http://adlnet.gov/expapi/verbs/initialized";
+        public const string Attempted = "http://adlnet.gov/expapi/verbs/attempted";
+        public const string Completed = "http://adlnet.gov/expapi/verbs/completed";
+        public const string Passed = "http://adlnet.gov/expapi/verbs/passed";
+        public const string Failed = "http://adlnet.gov/expapi/verbs/failed";
+        public const string Abandoned = "http://adlnet.gov/expapi/verbs/abandoned";
+        public const string Terminated = "http://adlnet.gov/expapi/verbs/terminated";
 
-        // Decision events
-        public const string DecisionRationaleCaptured = VerbBase + "decision-rationale-captured";
-        public const string DecisionCommitted = VerbBase + "decision-committed";
-        public const string DecisionRevised = VerbBase + "decision-revised";
+        // --- Profile verbs (spec §4.2) ---
+        public const string Measured = VerbBase + "measured";
+        public const string SelectedCuff = VerbBase + "selected-cuff";
+        public const string PlacedCuff = VerbBase + "placed-cuff";
+        public const string PredictedError = VerbBase + "predicted-error";
+        public const string RequestedHint = VerbBase + "requested-hint";
+        public const string ReceivedCoaching = VerbBase + "received-coaching";
+        public const string RepositionedCuff = VerbBase + "repositioned-cuff";
+        public const string FixatedRegion = VerbBase + "fixated-region";
 
-        // Safety gate events
-        public const string SafetyGateFired = VerbBase + "safety-gate-fired";
-        public const string SafetyGateRedirected = VerbBase + "safety-gate-redirected";
-        public const string SafetyGateResolved = VerbBase + "safety-gate-resolved";
+        // --- Activity types (spec §5.1) ---
+        public const string ActivityTypeSession = ActivityTypeBase + "session";
+        public const string ActivityTypeLesson = ActivityTypeBase + "lesson";
+        public const string ActivityTypeTrial = ActivityTypeBase + "trial";
+        public const string ActivityTypeMeasurement = ActivityTypeBase + "measurement";
+        public const string ActivityTypeCuffSelection = ActivityTypeBase + "cuff-selection";
+        public const string ActivityTypeCuffPlacement = ActivityTypeBase + "cuff-placement";
+        public const string ActivityTypeErrorPrediction = ActivityTypeBase + "error-prediction";
+        public const string ActivityTypeHint = ActivityTypeBase + "hint";
+        public const string ActivityTypeCoachingPrompt = ActivityTypeBase + "coaching-prompt";
+        public const string ActivityTypeRegionOfInterest = ActivityTypeBase + "region-of-interest";
 
-        // Coaching
-        public const string CoachUtterancePlayed = VerbBase + "coach-utterance-played";
+        // --- Context extensions (spec §8.6) ---
+        public const string ExtProfileVersion = ExtBase + "profile-version";
+        public const string ExtDeviceModel = ExtBase + "device-model";
+        public const string ExtSdkVersion = ExtBase + "sdk-version";
+        public const string ExtAppVersion = ExtBase + "app-version";
+        public const string ExtAudienceTag = ExtBase + "audience-tag";
+        public const string ExtFixationSummary = ExtBase + "fixation-summary";
 
-        // Mastery
-        public const string PerStationMasteryAchieved = VerbBase + "per-station-mastery-achieved";
-        public const string FullEncounterMasteryAchieved = VerbBase + "full-encounter-mastery-achieved";
-        public const string PersistentMasteryAchieved = VerbBase + "persistent-mastery-achieved";
+        // --- Trial object extensions (spec §8.1) ---
+        public const string ExtTrialType = ExtBase + "trial-type";
+        public const string ExtArchetypeId = ExtBase + "archetype-id";
+        public const string ExtArchetypeArmCircumferenceCm = ExtBase + "archetype-arm-circumference-cm";
+        public const string ExtArchetypeTaperCoefficient = ExtBase + "archetype-taper-coefficient";
+        public const string ExtContentVersion = ExtBase + "content-version";
+        public const string ExtHintsAllowed = ExtBase + "hints-allowed";
+        public const string ExtSnapEnabled = ExtBase + "snap-enabled";
 
-        // Context extensions
-        public const string ExtMode = ExtBase + "mode";
-        public const string ExtTarget = ExtBase + "target";
-        public const string ExtPersona = ExtBase + "persona";
-        public const string ExtCuffClassSelected = ExtBase + "cuff_class_selected";
-        public const string ExtMuacCm = ExtBase + "muac_cm";
-        public const string ExtGateId = ExtBase + "gate_id";
-        public const string ExtTriggerId = ExtBase + "trigger_id";
-        public const string ExtPromptVersion = ExtBase + "prompt_version";
-        public const string ExtAuditEntryId = ExtBase + "audit_entry_id";
+        // --- measured result extensions (spec §8.2) ---
+        public const string ExtReportedCircumferenceCm = ExtBase + "reported-circumference-cm";
+        public const string ExtMeasurementErrorCm = ExtBase + "measurement-error-cm";
+        public const string ExtTapeAnchorPosition = ExtBase + "tape-anchor-position";
+        public const string ExtMeasurementAttempts = ExtBase + "measurement-attempts";
+
+        // --- selected-cuff result extensions (spec §8.3) ---
+        public const string ExtCuffId = ExtBase + "cuff-id";
+        public const string ExtCuffSizeClass = ExtBase + "cuff-size-class";
+        public const string ExtCuffBladderWidthCm = ExtBase + "cuff-bladder-width-cm";
+        public const string ExtCuffBladderLengthCm = ExtBase + "cuff-bladder-length-cm";
+        public const string ExtSelectionCorrect = ExtBase + "selection-correct";
+        public const string ExtAlternativeCuffsConsidered = ExtBase + "alternative-cuffs-considered";
+
+        // --- placed-cuff result extensions (spec §8.4) ---
+        public const string ExtBladderOverArteryAngularErrorDeg = ExtBase + "bladder-over-artery-angular-error-deg";
+        public const string ExtLongitudinalErrorCm = ExtBase + "longitudinal-error-cm";
+        public const string ExtCoverageFraction = ExtBase + "coverage-fraction";
+        public const string ExtOrientationCorrect = ExtBase + "orientation-correct";
+        public const string ExtRepositionings = ExtBase + "repositionings";
+
+        // --- predicted-error result extensions (spec §8.5) ---
+        public const string ExtPredictedSystolicErrorMmHg = ExtBase + "predicted-systolic-error-mmhg";
+        public const string ExtPredictedDiastolicErrorMmHg = ExtBase + "predicted-diastolic-error-mmhg";
+        public const string ExtSimulatedSystolicErrorMmHg = ExtBase + "simulated-systolic-error-mmhg";
+        public const string ExtSimulatedDiastolicErrorMmHg = ExtBase + "simulated-diastolic-error-mmhg";
+        public const string ExtPredictionAccuracyMmHg = ExtBase + "prediction-accuracy-mmhg";
     }
 }

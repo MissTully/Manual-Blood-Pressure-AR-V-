@@ -99,8 +99,10 @@ namespace Encountive.Stations
         public async Task<StepResult> Start()
         {
             var r = new StepResult { Stage = Stage };
-            r.Emitted.Add(_xapi.StationEntered(StationId));
-            r.Emitted.Add(_xapi.StageEntered(StationId, Stage.ToString()));
+            // Profile §5: each station is modeled as a lesson; the trial-
+            // /selection-/measurement-level statements that follow are
+            // automatically scoped to this lesson as their parent.
+            r.Emitted.Add(_xapi.EnterLesson(StationId, "Cuff Size Selection"));
             await Fire(r, "CSS-SF-1");
             return r;
         }
@@ -120,14 +122,18 @@ namespace Encountive.Stations
                     r.GateFired = true;
                     r.Gate = res;
                     r.Stage = Stage; // blocked; no advance
-                    r.Emitted.Add(_xapi.SafetyGateFired(StationId, res.GateId));
+                    // Profile has no native "gate fired" verb; the redirect
+                    // coaching utterance below records the event through
+                    // the standard received-coaching path. The gate id is
+                    // encoded in the trigger id (e.g. CSS-SG-1).
                     await Fire(r, res.CoachTriggerId);
                     return r;
                 }
 
                 if (_pendingGateId != null)
                 {
-                    r.Emitted.Add(_xapi.SafetyGateResolved(StationId, _pendingGateId));
+                    // Re-attempt passed; clear the pending gate. No
+                    // "resolved" verb exists in the profile.
                     _pendingGateId = null;
                 }
             }
@@ -219,9 +225,15 @@ namespace Encountive.Stations
                     _committed = d.Commit;
                     _ev.CuffCorrectOnFirstCommit = !_commitAttempted;
                     _commitAttempted = true;
-                    r.Emitted.Add(_xapi.DecisionCommitted(
-                        StationId, "S4", _persona.PersonaId,
-                        d.Commit.ToString(), _muac));
+                    // Profile §4.2 / §8.3 — cuff selection commit. Gate
+                    // already passed so the AHA rule is satisfied;
+                    // selection-correct=true on this commit.
+                    r.Emitted.Add(_xapi.SelectedCuff(
+                        caseOrTrialId: _persona.PersonaId,
+                        displayName: "Cuff selection for " + _persona.DisplayName,
+                        cuffId: d.Commit.ToString(),
+                        cuffSizeClass: d.Commit.ToString(),
+                        selectionCorrect: true));
                     await Advance(r, CssStage.S4_CuffSelection, CssStage.S5_Confirmation, "CSS-SF-5");
                     break;
 
@@ -241,7 +253,12 @@ namespace Encountive.Stations
                     r.RubricScores = CuffSizeSelectionRubric.Score(_ev);
                     if (_mode != TrainingMode.FullEncounter)
                         await Fire(r, "CSS-DB-1");
-                    r.Emitted.Add(_xapi.StageCompleted(StationId, CssStage.S5_Confirmation.ToString()));
+
+                    double scaled = NormalizedRubricScore(r.RubricScores);
+                    bool allMastery = AllMastery(r.RubricScores);
+                    r.Emitted.Add(allMastery
+                        ? _xapi.PassedLesson(StationId, "Cuff Size Selection", scaled)
+                        : _xapi.FailedLesson(StationId, "Cuff Size Selection", scaled));
                     Complete = true;
                     r.StationComplete = true;
                     break;
@@ -251,10 +268,25 @@ namespace Encountive.Stations
         private async Task Advance(StepResult r, CssStage from, CssStage to, string framingTrigger)
         {
             if (Stage != from) return;
-            r.Emitted.Add(_xapi.StageCompleted(StationId, from.ToString()));
+            // Stage transitions are internal to the FSM; the AR BP Cuff
+            // Trainer profile has no per-stage verbs, so xAPI emission
+            // happens via the framing trigger's received-coaching event.
             Stage = to;
-            r.Emitted.Add(_xapi.StageEntered(StationId, to.ToString()));
             await Fire(r, framingTrigger);
+        }
+
+        private static double NormalizedRubricScore(System.Collections.Generic.IReadOnlyList<CriterionScore> scores)
+        {
+            if (scores == null || scores.Count == 0) return 0.0;
+            double sum = 0;
+            foreach (var c in scores) sum += c.Score;
+            return System.Math.Round(sum / (scores.Count * 4.0), 3); // 0..1
+        }
+
+        private static bool AllMastery(System.Collections.Generic.IReadOnlyList<CriterionScore> scores)
+        {
+            foreach (var c in scores) if (!c.IsMastery) return false;
+            return true;
         }
 
         private async Task Fire(StepResult r, string triggerId)
@@ -270,8 +302,7 @@ namespace Encountive.Stations
             });
             r.CoachTriggerId = triggerId;
             r.CoachText = u?.Text;
-            r.Emitted.Add(_xapi.CoachUtterancePlayed(
-                StationId, triggerId, u?.PromptTemplateVersion, u?.AuditEntryId));
+            r.Emitted.Add(_xapi.ReceivedCoaching(triggerId));
         }
 
         private static TriggerFamily FamilyOf(string id)

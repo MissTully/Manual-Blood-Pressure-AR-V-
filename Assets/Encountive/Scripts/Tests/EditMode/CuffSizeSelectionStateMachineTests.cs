@@ -20,8 +20,8 @@ namespace Encountive.SafetyGates.Tests
         {
             int n = 0;
             var factory = new XApiStatementFactory(
-                "learner", mode, "galaxy_xr",
-                new FixedClock(), () => "x-" + (++n));
+                FactoryHelpers.Session(), new FixedClock(),
+                () => "a4d1e2c0-3f7b-4d8a-9b1f-" + (++n).ToString("x12"));
             return new CuffSizeSelectionStateMachine(
                 new SafetyGateEngine(), new LocalFallbackTriggerClient(() => "u"),
                 factory, p, mode);
@@ -70,9 +70,12 @@ namespace Encountive.SafetyGates.Tests
                 new CuffActionData { Accurate = true });
 
             Assert.IsFalse(ok.GateFired);
-            Assert.IsTrue(ok.Emitted.Any(s =>
-                s.Verb.Id == XApiVocabulary.SafetyGateResolved));
+            // Re-attempt advanced past S1; the AR BP Cuff Trainer profile
+            // has no "resolved" verb, so we assert the stage progression
+            // and the absence of another SG-1 coaching event.
             Assert.AreEqual(CssStage.S3_Measurement, sm.Stage);
+            Assert.IsFalse(ok.Emitted.Any(s =>
+                s.Object?.Id == XApiVocabulary.ActivityBase + "coaching-prompt/CSS-SG-1"));
         }
 
         [Test]
@@ -118,6 +121,39 @@ namespace Encountive.SafetyGates.Tests
 
             var rationale = final.RubricScores.First(c => c.Criterion == "Rationale capture (S5)");
             Assert.AreEqual(0, rationale.Score);
+        }
+
+        [Test]
+        public async Task EveryEmittedStatement_ConformsToTheProfileValidator()
+        {
+            var sm = New(AdultA);
+            var validator = new StatementValidator();
+            var collected = new System.Collections.Generic.List<XApiStatement>();
+
+            void Add(StepResult r) => collected.AddRange(r.Emitted);
+
+            Add(await sm.Start());
+            Add(await sm.Step(CuffAction.VerifyIdentity));
+            Add(await sm.Step(CuffAction.GiveConsent));
+            Add(await sm.Step(CuffAction.IdentifyLandmarks,
+                new CuffActionData { Accurate = true }));
+            Add(await sm.Step(CuffAction.MeasureMuac,
+                new CuffActionData { MuacCm = 30, Accurate = true }));
+            Add(await sm.Step(CuffAction.CommitCuff,
+                new CuffActionData { Commit = CuffClass.Adult }));
+            Add(await sm.Step(CuffAction.CaptureRationale, new CuffActionData
+            {
+                RationaleText = "This person needs an Adult cuff; the bladder fits the rule."
+            }));
+            Add(await sm.Step(CuffAction.ConfirmS5));
+            Add(await sm.Step(CuffAction.AdvanceToStation3));
+
+            foreach (var s in collected)
+            {
+                var r = validator.Validate(s);
+                Assert.IsTrue(r.Ok,
+                    $"verb={s.Verb?.Id} object={s.Object?.Id} errors={string.Join("; ", r.Errors)}");
+            }
         }
 
         [Test]

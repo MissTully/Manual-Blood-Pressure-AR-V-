@@ -13,8 +13,6 @@ namespace Encountive.SafetyGates.Tests
             new DateTimeOffset(2026, 5, 15, 14, 23, 11, 527, TimeSpan.Zero);
     }
 
-    /// <summary>Sink whose availability is toggled to simulate a network
-    /// outage and reconnect (SDD §3.2.2).</summary>
     internal sealed class FlakySink : IXApiSink
     {
         public bool Online = true;
@@ -30,46 +28,117 @@ namespace Encountive.SafetyGates.Tests
         }
     }
 
+    internal static class FactoryHelpers
+    {
+        public const string SessionUuid = "a4d1e2c0-3f7b-4d8a-9b1f-2e6e1c7c0000";
+        public const string StatementUuid = "a4d1e2c0-3f7b-4d8a-9b1f-2e6e1c7c0001";
+
+        public static XApiSessionInfo Session(string sessionId = SessionUuid) =>
+            new XApiSessionInfo(
+                sessionId: sessionId,
+                learnerPseudonym: "learner-7af3e2",
+                institutionalLearnerId: "reva-cohort-12-learner-074",
+                sdkVersion: "androidxr-dp3",
+                appVersion: "0.1.0",
+                audienceTag: "vma",
+                contentVersion: "1.0.0");
+
+        public static XApiStatementFactory NewFactory()
+        {
+            int n = 0;
+            return new XApiStatementFactory(
+                Session(), new FixedClock(),
+                () => "a4d1e2c0-3f7b-4d8a-9b1f-" + (++n).ToString("x12"));
+        }
+    }
+
     public sealed class XApiStatementFactoryTests
     {
-        private XApiStatementFactory NewFactory(int idStart = 0)
-        {
-            int n = idStart;
-            return new XApiStatementFactory(
-                "learner-uuid", TrainingMode.Guided, "galaxy_xr",
-                new FixedClock(), () => "id-" + (++n));
-        }
-
         [Test]
-        public void StatementsAreVersion103_WithModeAndTargetOnContext()
+        public void EveryStatement_CarriesProfileCategoryAndRegistration()
         {
-            var s = NewFactory().StationEntered("S2");
+            var s = FactoryHelpers.NewFactory().Initialized();
 
             Assert.AreEqual("1.0.3", s.Version);
-            Assert.AreEqual("guided", s.Context.Extensions[XApiVocabulary.ExtMode]);
-            Assert.AreEqual("galaxy_xr", s.Context.Extensions[XApiVocabulary.ExtTarget]);
-            Assert.AreEqual("2026-05-15T14:23:11.527Z", s.Timestamp);
-            Assert.AreEqual("learner-uuid", s.Actor.Account.Name);
+            Assert.AreEqual(FactoryHelpers.SessionUuid, s.Context.Registration);
+            Assert.AreEqual(XApiVocabulary.Platform, s.Context.Platform);
+            Assert.AreEqual("en-US", s.Context.Language);
+
+            Assert.IsNotNull(s.Context.ContextActivities.Category);
+            Assert.AreEqual(XApiVocabulary.ProfileIri,
+                s.Context.ContextActivities.Category[0].Id);
+            Assert.AreEqual("v1.0",
+                s.Context.Extensions[XApiVocabulary.ExtProfileVersion]);
+            Assert.AreEqual("galaxy-xr",
+                s.Context.Extensions[XApiVocabulary.ExtDeviceModel]);
         }
 
         [Test]
-        public void DecisionCommitted_CarriesPersonaCuffAndMuac()
+        public void Actor_IsPseudonymous_AndUsesLearnersHomePage()
         {
-            var s = NewFactory().DecisionCommitted("S2", "S4", "adultB", "Adult Large", 38);
+            var s = FactoryHelpers.NewFactory().Initialized();
+            Assert.AreEqual("Agent", s.Actor.ObjectType);
+            Assert.AreEqual("learner-7af3e2", s.Actor.Name);
+            Assert.AreEqual(XApiVocabulary.LearnersHomePage, s.Actor.Account.HomePage);
+            Assert.AreEqual("reva-cohort-12-learner-074", s.Actor.Account.Name);
+        }
 
-            Assert.AreEqual(XApiVocabulary.DecisionCommitted, s.Verb.Id);
-            Assert.AreEqual("adultB", s.Context.Extensions[XApiVocabulary.ExtPersona]);
-            Assert.AreEqual("Adult Large", s.Context.Extensions[XApiVocabulary.ExtCuffClassSelected]);
-            Assert.AreEqual(38.0, s.Context.Extensions[XApiVocabulary.ExtMuacCm]);
+        [Test]
+        public void Initialized_TargetsSessionActivityType()
+        {
+            var s = FactoryHelpers.NewFactory().Initialized();
+            Assert.AreEqual(XApiVocabulary.Initialized, s.Verb.Id);
+            Assert.AreEqual(XApiVocabulary.ActivityTypeSession, s.Object.Definition.Type);
+            Assert.IsTrue(s.Object.Id.StartsWith(XApiVocabulary.ActivityBase + "session/"));
+        }
+
+        [Test]
+        public void EnterLesson_SetsParentForSubsequentChildStatements()
+        {
+            var f = FactoryHelpers.NewFactory();
+            f.EnterLesson("S2", "Cuff Size Selection");
+
+            var sel = f.SelectedCuff("adultB", "Cuff selection for Margarita",
+                cuffId: "manuf-A-large-adult", cuffSizeClass: "large-adult",
+                selectionCorrect: true);
+
+            Assert.IsNotNull(sel.Context.ContextActivities.Parent);
+            Assert.AreEqual(f.CurrentLessonActivityId,
+                sel.Context.ContextActivities.Parent[0].Id);
+            Assert.AreEqual(XApiVocabulary.ActivityTypeCuffSelection,
+                sel.Object.Definition.Type);
+        }
+
+        [Test]
+        public void SelectedCuff_CarriesProfileExtensions_AndScaledScore()
+        {
+            var f = FactoryHelpers.NewFactory();
+            f.EnterLesson("S2", "Cuff Size Selection");
+
+            var s = f.SelectedCuff("adultA", "Adult A",
+                cuffId: "manuf-A-adult-001", cuffSizeClass: "adult",
+                selectionCorrect: true, bladderWidthCm: 13.0, bladderLengthCm: 24.0);
+
+            Assert.AreEqual(XApiVocabulary.SelectedCuff, s.Verb.Id);
             Assert.IsTrue(s.Result.Success);
+            Assert.AreEqual(1.0, s.Result.Score.Scaled);
+            Assert.AreEqual("manuf-A-adult-001",
+                s.Result.Extensions[XApiVocabulary.ExtCuffId]);
+            Assert.AreEqual(true,
+                s.Result.Extensions[XApiVocabulary.ExtSelectionCorrect]);
         }
 
         [Test]
-        public void SafetyGateFired_TagsGateId()
+        public void ReceivedCoaching_EncodesTriggerIdInActivityIri()
         {
-            var s = NewFactory().SafetyGateFired("S2", "CSS-SG-5");
-            Assert.AreEqual("CSS-SG-5", s.Context.Extensions[XApiVocabulary.ExtGateId]);
-            Assert.AreEqual(XApiVocabulary.SafetyGateFired, s.Verb.Id);
+            var f = FactoryHelpers.NewFactory();
+            f.EnterLesson("S2", "Cuff Size Selection");
+
+            var c = f.ReceivedCoaching("CSS-SG-1");
+            Assert.AreEqual(XApiVocabulary.ReceivedCoaching, c.Verb.Id);
+            Assert.AreEqual(
+                XApiVocabulary.ActivityBase + "coaching-prompt/CSS-SG-1",
+                c.Object.Id);
         }
     }
 
@@ -99,15 +168,15 @@ namespace Encountive.SafetyGates.Tests
             em.Emit(Stmt("a"));
             em.Emit(Stmt("b"));
 
-            Assert.IsFalse(await em.FlushAsync());   // outage
-            Assert.AreEqual(2, em.PendingCount);     // retained
+            Assert.IsFalse(await em.FlushAsync());
+            Assert.AreEqual(2, em.PendingCount);
 
             sink.Online = true;
-            Assert.IsTrue(await em.FlushAsync());     // reconnect
+            Assert.IsTrue(await em.FlushAsync());
             Assert.AreEqual(0, em.PendingCount);
             CollectionAssert.AreEqual(
                 new[] { "a", "b" },
-                sink.Stored.ConvertAll(s => s.Id));   // original order
+                sink.Stored.ConvertAll(s => s.Id));
         }
 
         [Test]
